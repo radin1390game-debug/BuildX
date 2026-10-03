@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
-from config import get_groq_api_key, get_groq_model
+from config import get_groq_api_key
 
 
 class LeadAnalysisSchema(BaseModel):
@@ -37,20 +37,19 @@ def analyze_lead_node(state: AgentState) -> AgentState:
     if not api_key:
         return {
             **state,
-            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API را در .env یا ورودی وارد کنید."
+            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API را وارد کنید."
         }
 
-    model_name = get_groq_model()
+    
+    MODEL_NAME = "llama-3.3-70b-versatile"
 
     try:
-        # مقداردهی اولیه LLM با تنظیم دمای پایین برای دقت بالا
         llm = ChatGroq(
             groq_api_key=api_key,
-            model_name=model_name,
+            model_name=MODEL_NAME,
             temperature=0.1
         )
 
-        # اجبار مدل به تولید خروجی دقیقاً طبق ساختار Pydantic
         structured_llm = llm.with_structured_output(LeadAnalysisSchema)
 
         prompt = ChatPromptTemplate.from_messages([
@@ -62,12 +61,6 @@ def analyze_lead_node(state: AgentState) -> AgentState:
 ورودی‌ها:
 - توضیحات محصول/خدمت: {product_desc}
 - پیام کاربر/مشتری: {user_msg}
-
-ارزیابی کنید:
-1. آیا پیام یک لید واقعی است؟
-2. امتیاز ارتباط (0 تا 100) چقدر است؟
-3. استدلال منطقی خود را بنویسید.
-4. در صورت لید بودن، یک پاسخ جذاب و حرفه‌ای پیشنهاد دهید.
 """),
             ("human", "توضیحات خدمت:\n{product_desc}\n\nپیام دریافتی:\n{user_msg}")
         ])
@@ -81,7 +74,7 @@ def analyze_lead_node(state: AgentState) -> AgentState:
 
         return {
             **state,
-            "result": response.dict(),
+            "result": response.model_dump(),
             "error": None
         }
 
@@ -91,17 +84,11 @@ def analyze_lead_node(state: AgentState) -> AgentState:
             "error": f"خطا در اجرای ایجنت: {str(e)}"
         }
 
-
 workflow = StateGraph(AgentState)
-
-
 workflow.add_node("analyzer", analyze_lead_node)
-
-
 workflow.set_entry_point("analyzer")
 workflow.add_edge("analyzer", END)
 
-# کامپایل موتور گراف
 agent_app = workflow.compile()
 
 
