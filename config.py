@@ -1,16 +1,14 @@
 import os
-from typing import Optional
-from dotenv import load_dotenv
+import streamlit as st
 
-load_dotenv()
+def get_groq_api_key():
+    # خواندن امن کلید از Streamlit Secrets یا .env
+    if hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
+        return st.secrets["GROQ_API_KEY"]
+    return os.getenv("GROQ_API_KEY", "")
 
-class Config:
-    DEFAULT_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-specdec")
-    TEMPERATURE = 0.1
-    
-    @staticmethod
-    def get_api_key(override_key: Optional[str] = None) -> str:
-        api_key = override_key or os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY not found")
-        return api_key.strip()
+def get_groq_model():
+    # مدل استاندارد، پایدار و رسمی Gemma 2 9B
+    if hasattr(st, "secrets") and "GROQ_MODEL" in st.secrets:
+        return st.secrets["GROQ_MODEL"]
+    return os.getenv("GROQ_MODEL", "gemma2-9b-it")
