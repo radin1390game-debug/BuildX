@@ -13,54 +13,66 @@ st.set_page_config(
 if not check_password():
     st.stop()
 
+# اصلاح استایل برای شفافیت و خوانایی ۱۰۰٪ متون
 st.markdown("""
 <style>
     .stApp {
-        background: linear-gradient(135deg, #0d0f18 0%, #121624 50%, #080a10 100%);
-        color: #e2e8f0;
+        background-color: #0f172a;
+        color: #f8fafc;
     }
     
+    /* کارت‌های متمایز با متن روشن و واضح */
     .glass-card {
-        background: rgba(23, 31, 51, 0.6);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
         padding: 24px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         margin-bottom: 20px;
     }
     
+    h1, h2, h3, h4, label, p, span {
+        color: #f8fafc !important;
+    }
+    
+    /* اصلاح رنگ لایبل‌ها و اینپوت‌ها */
+    .stTextArea label, .stTextInput label {
+        color: #cbd5e1 !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+    }
+    
+    .stTextArea textarea, .stTextInput input {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+        border: 1px solid #475569 !important;
+        border-radius: 8px !important;
+    }
+    
     .hero-title {
-        background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 2.6rem;
+        color: #818cf8 !important;
+        font-size: 2.5rem;
         font-weight: 800;
-        letter-spacing: -1px;
     }
     
     .stButton>button {
         width: 100%;
-        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
-        color: white;
+        background-color: #4f46e5;
+        color: #ffffff !important;
         font-weight: 700;
         border: none;
-        border-radius: 10px;
-        padding: 12px 24px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+        border-radius: 8px;
+        padding: 12px;
     }
     .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 25px rgba(124, 58, 237, 0.6);
+        background-color: #4338ca;
     }
     
     .metric-box {
-        background: rgba(99, 102, 241, 0.1);
+        background-color: #1e1b4b;
         border-left: 4px solid #6366f1;
         padding: 15px;
         border-radius: 8px;
+        margin-bottom: 15px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -168,8 +180,8 @@ with col2:
             
         st.markdown(f"""
         <div class='metric-box'>
-            <h4 style='margin:0; color:#818cf8;'>امتیاز ارتباط (Relevance Score)</h4>
-            <h2 style='margin:0; color:#f8fafc;'>{result.get('relevance_score', 0)} / 100</h2>
+            <h4 style='margin:0; color:#a5b4fc !important;'>امتیاز ارتباط (Relevance Score)</h4>
+            <h2 style='margin:0; color:#ffffff !important;'>{result.get('relevance_score', 0)} / 100</h2>
         </div>
         """, unsafe_allow_html=True)
         
