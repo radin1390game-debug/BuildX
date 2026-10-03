@@ -30,30 +30,39 @@ class AgentState(TypedDict):
     result: Optional[dict]
     error: Optional[str]
 
+# لیست مدل‌های پشتیبان به ترتیب اولویت
+CANDIDATE_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "llama3-70b-8192",
+    "mixtral-8x7b-32768"
+]
+
 
 def analyze_lead_node(state: AgentState) -> AgentState:
     api_key = state.get("api_key") or get_groq_api_key()
     
-    if not api_key:
+    if not api_key or not api_key.strip():
         return {
             **state,
-            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API را وارد کنید."
+            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API خود را در کادر مربوطه یا در فایل .env وارد کنید."
         }
 
+    last_error = None
+
     
-    MODEL_NAME = "llama-3.3-70b-versatile"
+    for model_name in CANDIDATE_MODELS:
+        try:
+            llm = ChatGroq(
+                groq_api_key=api_key.strip(),
+                model_name=model_name,
+                temperature=0.1
+            )
 
-    try:
-        llm = ChatGroq(
-            groq_api_key=api_key,
-            model_name=MODEL_NAME,
-            temperature=0.1
-        )
+            structured_llm = llm.with_structured_output(LeadAnalysisSchema)
 
-        structured_llm = llm.with_structured_output(LeadAnalysisSchema)
-
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", """شما یک ایجنت ارزیابی دقیق فرصت‌های فروش (Lead Qualification Agent) هستید.
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", """شما یک ایجنت ارزیابی دقیق فرصت‌های فروش (Lead Qualification Agent) هستید.
 وظیفه شما بررسی پیام دریافت شده از جوامع آنلاین و تطبیق آن با خدمات/محصول ارائه شده است.
 
 پاسخ شما باید کاملاً فارسی، حرفه‌ای و دقیق باشد.
@@ -62,27 +71,31 @@ def analyze_lead_node(state: AgentState) -> AgentState:
 - توضیحات محصول/خدمت: {product_desc}
 - پیام کاربر/مشتری: {user_msg}
 """),
-            ("human", "توضیحات خدمت:\n{product_desc}\n\nپیام دریافتی:\n{user_msg}")
-        ])
+                ("human", "توضیحات خدمت:\n{product_desc}\n\nپیام دریافتی:\n{user_msg}")
+            ])
 
-        chain = prompt | structured_llm
-        
-        response: LeadAnalysisSchema = chain.invoke({
-            "product_desc": state["product_desc"],
-            "user_msg": state["user_msg"]
-        })
+            chain = prompt | structured_llm
+            
+            response: LeadAnalysisSchema = chain.invoke({
+                "product_desc": state["product_desc"],
+                "user_msg": state["user_msg"]
+            })
 
-        return {
-            **state,
-            "result": response.model_dump(),
-            "error": None
-        }
+            return {
+                **state,
+                "result": response.model_dump(),
+                "error": None
+            }
 
-    except Exception as e:
-        return {
-            **state,
-            "error": f"خطا در اجرای ایجنت: {str(e)}"
-        }
+        except Exception as e:
+            last_error = str(e)
+            continue  # امتحان مدل بعدی در صورت بروز خطا
+
+    return {
+        **state,
+        "error": f"خطا در ارتباط با مدل‌ها. احتمالاً کلید API نامعتبر است یا دسترسی محدود شده است. جزئیات: {last_error}"
+    }
+
 
 workflow = StateGraph(AgentState)
 workflow.add_node("analyzer", analyze_lead_node)
