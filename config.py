@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    DEFAULT_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile")
+    DEFAULT_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatil")
     TEMPERATURE = 0.1
     
     @staticmethod
