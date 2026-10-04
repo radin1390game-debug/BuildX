@@ -6,7 +6,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
 from config import get_groq_api_key
 
-
+# ---------------------------------------------------------
+# 1. تعریف Schema خروجی با Pydantic
+# ---------------------------------------------------------
 class LeadAnalysisSchema(BaseModel):
     is_potential_lead: bool = Field(
         description="آیا این پیام نشان‌دهنده فرصت فروش (لید) برای خدمت/محصول ما است؟"
@@ -22,7 +24,9 @@ class LeadAnalysisSchema(BaseModel):
         description="پاسخ حرفه‌ای و شخصی‌سازی‌شده به مشتری (اگر لید مناسب است)"
     )
 
-
+# ---------------------------------------------------------
+# 2. تعریف State برای LangGraph
+# ---------------------------------------------------------
 class AgentState(TypedDict):
     product_desc: str
     user_msg: str
@@ -30,33 +34,36 @@ class AgentState(TypedDict):
     result: Optional[dict]
     error: Optional[str]
 
-# لیست مدل‌های پشتیبان به ترتیب اولویت
 CANDIDATE_MODELS = [
     "llama-3.3-70b-versatile",
-    "llama-3.1-70b-versatile",
+    "llama-3.1-8b-instant",
     "llama3-70b-8192",
     "mixtral-8x7b-32768"
 ]
 
-
+# ---------------------------------------------------------
+# 3. گره اصلی پردازش
+# ---------------------------------------------------------
 def analyze_lead_node(state: AgentState) -> AgentState:
     api_key = state.get("api_key") or get_groq_api_key()
     
     if not api_key or not api_key.strip():
         return {
             **state,
-            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API خود را در کادر مربوطه یا در فایل .env وارد کنید."
+            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API خود را وارد کنید."
         }
 
     last_error = None
 
-    
     for model_name in CANDIDATE_MODELS:
         try:
+            # تنظیم درخواست شبکه با مهلت زمانی بالا جهت عبور از اختلالات اینترنت
             llm = ChatGroq(
                 groq_api_key=api_key.strip(),
                 model_name=model_name,
-                temperature=0.1
+                temperature=0.1,
+                max_retries=3,
+                request_timeout=30.0
             )
 
             structured_llm = llm.with_structured_output(LeadAnalysisSchema)
@@ -89,14 +96,16 @@ def analyze_lead_node(state: AgentState) -> AgentState:
 
         except Exception as e:
             last_error = str(e)
-            continue  # امتحان مدل بعدی در صورت بروز خطا
+            continue
 
     return {
         **state,
-        "error": f"خطا در ارتباط با مدل‌ها. احتمالاً کلید API نامعتبر است یا دسترسی محدود شده است. جزئیات: {last_error}"
+        "error": f"خطا در ارتباط با سرورهای Groq (محدودیت شبکه/IP یا کلید نامعتبر). جزئیات: {last_error}"
     }
 
-
+# ---------------------------------------------------------
+# 4. ساخت گراف LangGraph
+# ---------------------------------------------------------
 workflow = StateGraph(AgentState)
 workflow.add_node("analyzer", analyze_lead_node)
 workflow.set_entry_point("analyzer")
@@ -104,7 +113,9 @@ workflow.add_edge("analyzer", END)
 
 agent_app = workflow.compile()
 
-
+# ---------------------------------------------------------
+# 5. تابع فراخوانی
+# ---------------------------------------------------------
 def run_lead_finder(product_desc: str, user_msg: str, custom_api_key: Optional[str] = None) -> dict:
     initial_state: AgentState = {
         "product_desc": product_desc,
