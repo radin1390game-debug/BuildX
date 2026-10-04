@@ -21,7 +21,7 @@ class LeadAnalysisSchema(BaseModel):
     )
     suggested_reply: Optional[str] = Field(
         default="",
-        description="پاسخ حرفه‌ای و شخصی‌سازی‌شده به مشتری (اگر لید مناسب است)"
+        description="پاسخ حرفه‌ای و شخصی‌‌سازی‌شده به مشتری (اگر لید مناسب است)"
     )
 
 # ---------------------------------------------------------
@@ -34,11 +34,10 @@ class AgentState(TypedDict):
     result: Optional[dict]
     error: Optional[str]
 
+# فقط مدل‌های رسمی، فعال و آنلاین Groq
 CANDIDATE_MODELS = [
     "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "llama3-70b-8192",
-    "mixtral-8x7b-32768"
+    "llama-3.1-8b-instant"
 ]
 
 # ---------------------------------------------------------
@@ -50,20 +49,19 @@ def analyze_lead_node(state: AgentState) -> AgentState:
     if not api_key or not api_key.strip():
         return {
             **state,
-            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API خود را وارد کنید."
+            "error": "کلید API معتبر یافت نشد. لطفاً کلید Groq API خود را در کادر مربوطه یا فایل .env وارد کنید."
         }
 
     last_error = None
 
     for model_name in CANDIDATE_MODELS:
         try:
-            # تنظیم درخواست شبکه با مهلت زمانی بالا جهت عبور از اختلالات اینترنت
             llm = ChatGroq(
                 groq_api_key=api_key.strip(),
                 model_name=model_name,
                 temperature=0.1,
-                max_retries=3,
-                request_timeout=30.0
+                max_retries=2,
+                request_timeout=25.0
             )
 
             structured_llm = llm.with_structured_output(LeadAnalysisSchema)
@@ -100,7 +98,7 @@ def analyze_lead_node(state: AgentState) -> AgentState:
 
     return {
         **state,
-        "error": f"خطا در ارتباط با سرورهای Groq (محدودیت شبکه/IP یا کلید نامعتبر). جزئیات: {last_error}"
+        "error": f"خطا در ارتباط با مدل‌های Groq (لطفاً از معتبر بودن API Key مطمئن شوید). جزئیات: {last_error}"
     }
 
 # ---------------------------------------------------------
